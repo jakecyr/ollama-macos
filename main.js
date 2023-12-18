@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, Tray } = require('electron');
 const path = require('path');
-const { default: axios } = require('axios');
+const { Ollama } = require('langchain/llms/ollama');
 
 let tray = null;
 let window = null;
@@ -16,6 +16,7 @@ const createWindow = () => {
       nodeIntegration: true,
       contextIsolation: false,
       preload: path.join(__dirname, 'client', 'public', 'preload.js'),
+      devTools: true,
     },
   });
 
@@ -25,12 +26,18 @@ const createWindow = () => {
     window.hide();
   });
   window.setWindowButtonVisibility(false);
+  window.webContents.openDevTools();
 };
 
 app.on('ready', () => {
   tray = new Tray(path.join(__dirname, 'IconTemplate.png'));
 
   tray.on('click', () => {
+    if (window && window.isVisible()) {
+      window.hide();
+      return;
+    }
+
     if (window === null) {
       createWindow();
     } else {
@@ -49,44 +56,25 @@ app.on('ready', () => {
 ipcMain.on('send-message', async (event, prompt) => {
   try {
     const model = 'mistral';
+    const baseUrl = 'http://localhost:11434';
 
-    prompt = `<s>[INST]You are a helpful assistant. Provide a concise answer as the Assistant.[/INST] Okay!</s>[INST]${prompt}[/INST]`;
+    prompt = `<s>[INST]You are a helpful assistant. Provide a concise single answer as the Assistant.[/INST] Okay!</s>[INST]User: ${prompt}\nAssistant: [/INST]`;
 
-    const response = await axios.post(
-      'http://0.0.0.0:11434/api/generate',
-      {
-        model,
-        prompt,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        responseType: 'stream',
-      },
-    );
+    const ollama = new Ollama({ baseUrl, model });
+    const stream = await ollama.stream(prompt);
 
-    let index = 0;
+    for await (const chunk of stream) {
+      event.reply('message-response', {
+        content: chunk,
+        done: false,
+      });
+    }
 
-    response.data.on('data', (chunk) => {
-      try {
-        const data = JSON.parse(chunk.toString());
-        data.index = index++;
-        console.log(data);
-        event.reply('message-response', data);
-      } catch (error) {
-        console.error('Incomplete or malformed chunk', error);
-      }
-    });
-
-    response.data.on('end', () => {
-      console.log('Stream ended');
-    });
-
-    response.data.on('error', () => {
-      console.log('Stream error');
+    event.reply('message-response', {
+      content: '',
+      done: true,
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error streaming response:', error);
   }
 });
