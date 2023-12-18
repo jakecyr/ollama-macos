@@ -16,7 +16,6 @@ const createWindow = () => {
       nodeIntegration: true,
       contextIsolation: false,
       preload: path.join(__dirname, 'client', 'public', 'preload.js'),
-      devTools: true,
     },
   });
 
@@ -26,7 +25,6 @@ const createWindow = () => {
     window.hide();
   });
   window.setWindowButtonVisibility(false);
-  window.webContents.openDevTools();
 };
 
 app.on('ready', () => {
