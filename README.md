@@ -1,10 +1,10 @@
-# OLlama Mac App
+# Ollama Mac App
 
-A toolbar app to access a local model server on macOS served with [OLlama](https://ollama.ai/).
+A toolbar app to access a local model server on macOS served with [Ollama](https://ollama.ai/).
 
 ## Setup
 
-1. Install [OLlama](https://ollama.ai/) on your computer
+1. Install [Ollama](https://ollama.ai/) on your computer
 2. Clone the repo
 3. Run `npm install` in the root to setup the electron app
 4. Run `npm install` in the "client" folder to install the client dependencies
